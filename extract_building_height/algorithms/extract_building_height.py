@@ -88,7 +88,7 @@ class ExtractBuildingHeightAlgorithm(QgsProcessingAlgorithm):
 
         feedback.setCurrentStep(4); logger.info('Paso 4: Redondeo (field calculator)')
         if feedback.isCanceled(): return {}
-        expr = 'round(coalesce("heightmax","height_max"), 2)'
+        expr = 'round("height_max", 2)'
         alg_params = {'FIELD_LENGTH': 0,'FIELD_NAME': 'height_rounded','FIELD_PRECISION': 2,'FIELD_TYPE': 0,
                       'FORMULA': expr,'INPUT': outputs['zonal']['OUTPUT'],'OUTPUT': parameters[self.PARAM_OUT]}
         out = processing.run('native:fieldcalculator', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
