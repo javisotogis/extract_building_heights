@@ -17,13 +17,9 @@ experimental=False
 deprecated=False
 
 [changelog]
-1.0.2
-- Fixed layer loading into QGIS using correct context.project() method
-1.0.1
-- Added custom DEM filter expression parameter for flexible point cloud filtering
-- Fixed automatic layer loading into QGIS after processing completion
-1.0.0
-- Initial public release as LiDARHeightExtractor (v1.0.0)
+1.0.2=Fixed layer loading into QGIS using correct context.project() method
+1.0.1=Added custom DEM filter expression parameter; improved automatic layer loading
+1.0.0=Initial public release as LiDARHeightExtractor (v1.0.0)
 
 [documentation]
 homepage=https://github.com/javisotogis/extract_building_heights
