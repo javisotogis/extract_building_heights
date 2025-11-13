@@ -1,5 +1,0 @@
-<RCC>
-  <qresource prefix="/plugins/extract_building_height">
-    <file>icon.svg</file>
-  </qresource>
-</RCC>

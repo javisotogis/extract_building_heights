@@ -1,0 +1,6 @@
+# External runtime requirements (not installed by this plugin)
+# PDAL (pdal_wrench) must be available in QGIS processing
+# GDAL and NumPy are required and typically present in QGIS Python
+pdal
+numpy
+gdal
