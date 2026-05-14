@@ -1,0 +1,27 @@
+[general]
+name=LiDARHeightExtractor
+qgisMinimumVersion=3.38
+qgisMaximumVersion=3.99
+version=2.0.1
+author=Your Name
+email=you@example.com
+description=Plugin to compute nDSM from point clouds and compute maximal height per polygon (buildings, trees...). Qt6 ready.
+about=LiDARHeightExtractor v2.0.1 - computes nDSM and adds 'lidar_height' (max per polygon). Depends on PDAL (pdal_wrench). Qt6 compatible. See docs for installation instructions.
+tracker=https://github.com/javisotogis/extract_building_heights/issues
+repository=https://github.com/javisotogis/extract_building_heights
+homepage=https://github.com/javisotogis/extract_building_heights
+license=GPL-3.0-or-later
+category=Raster
+icon=icon.svg
+experimental=False
+deprecated=False
+
+[changelog]
+2.0.1=Added optional polygon buffer parameter (default 0m) to fix geometry errors; allows positive/negative buffer values
+2.0.0=Qt6 compatibility update; QGIS 3.38+ minimum version; improved performance; enhanced logging
+1.0.2=Fixed layer loading into QGIS using correct context.project() method
+1.0.1=Added custom DEM filter expression parameter; improved automatic layer loading
+1.0.0=Initial public release as LiDARHeightExtractor (v1.0.0)
+
+[documentation]
+homepage=https://github.com/javisotogis/extract_building_heights

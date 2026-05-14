@@ -1,0 +1,38 @@
+2026-05-14T22:00:34     CRITICAL    Traceback (most recent call last):
+              File "C:\PROGRA~1/QGIS40~1.0/apps/qgis/./python\qgis\utils.py", line 475, in _startPlugin
+              plugins[packageName] = package.classFactory(iface)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              File "C:\Users/44753/AppData/Roaming/QGIS/QGIS4\profiles\default/python/plugins\Mergin\__init__.py", line 6, in classFactory
+              from .plugin import MerginPlugin
+              File "C:\PROGRA~1/QGIS40~1.0/apps/qgis/./python\qgis\utils.py", line 1082, in _import
+              mod = _builtin_import(name, globals, locals, fromlist, level)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              File "C:\Users/44753/AppData/Roaming/QGIS/QGIS4\profiles\default/python/plugins\Mergin\plugin.py", line 24, in <module>
+              from .configuration_dialog import ConfigurationDialog
+              File "C:\PROGRA~1/QGIS40~1.0/apps/qgis/./python\qgis\utils.py", line 1082, in _import
+              mod = _builtin_import(name, globals, locals, fromlist, level)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              File "C:\Users/44753/AppData/Roaming/QGIS/QGIS4\profiles\default/python/plugins\Mergin\configuration_dialog.py", line 14, in <module>
+              from .utils_auth import (
+              File "C:\PROGRA~1/QGIS40~1.0/apps/qgis/./python\qgis\utils.py", line 1082, in _import
+              mod = _builtin_import(name, globals, locals, fromlist, level)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              File "C:\Users/44753/AppData/Roaming/QGIS/QGIS4\profiles\default/python/plugins\Mergin\utils_auth.py", line 24, in <module>
+              from .utils import MERGIN_URL, get_qgis_proxy_config, get_plugin_version
+              File "C:\PROGRA~1/QGIS40~1.0/apps/qgis/./python\qgis\utils.py", line 1082, in _import
+              mod = _builtin_import(name, globals, locals, fromlist, level)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              File "C:\Users/44753/AppData/Roaming/QGIS/QGIS4\profiles\default/python/plugins\Mergin\utils.py", line 13, in <module>
+              from PyQt5.QtCore import QDateTime
+              File "C:\PROGRA~1/QGIS40~1.0/apps/qgis/./python\qgis\utils.py", line 1058, in _import
+              raise ImportError(msg)
+             ImportError: PyQt5 classes cannot be imported in a QGIS build based on Qt6.
+             Use PyQt6.QtCore or preferably the version independent qgis.PyQt.QtCore import instead (where available).
+             
+2026-05-14T22:02:15     WARNING    Traceback (most recent call last):
+              File "C:\Users/44753/AppData/Roaming/QGIS/QGIS4\profiles\default/python/plugins\lidar_height_extractor_v2_0_0\lidar_height_extractor_plugin.py", line 36, in open_dialog
+              dlg = ExtractBuildingHeightDialog(self.iface)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              File "C:\Users/44753/AppData/Roaming/QGIS/QGIS4\profiles\default/python/plugins\lidar_height_extractor_v2_0_0\ui\extract_building_height_dialog.py", line 11, in __init__
+              super(ExtractBuildingHeightDialog, self).__init__(parent)
+             TypeError: QDialog(parent: QWidget|None = None, flags: Qt.WindowType = Qt.WindowFlags()): argument 1 has unexpected type 'QgisInterface'
