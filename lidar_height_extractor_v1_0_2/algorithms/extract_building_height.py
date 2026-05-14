@@ -26,6 +26,7 @@ import processing
 class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
     PARAM_POLYGON = 'polygon_layer'
     PARAM_POINTCLOUD = 'point_cloud'
+    PARAM_BUFFER = 'buffer_distance'
     PARAM_DEM_EXPR = 'dem_filter_expression'
     PARAM_GROUND_EXPR = 'ground_filter_ie_classification__2'
     PARAM_RES = 'resolution'
@@ -37,6 +38,9 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
         # Move polygon to top and rename param
         self.addParameter(QgsProcessingParameterVectorLayer(
             self.PARAM_POLYGON, 'Polygon layer', types=[QgsProcessing.TypeVectorPolygon]))
+        self.addParameter(QgsProcessingParameterNumber(
+            self.PARAM_BUFFER, 'Polygon buffer distance (m) - default 0 for no buffer',
+            type=QgsProcessingParameterNumber.Double, defaultValue=0.0, minValue=0.0))
         self.addParameter(QgsProcessingParameterPointCloudLayer(
             self.PARAM_POINTCLOUD, 'Point Cloud'))
         self.addParameter(QgsProcessingParameterExpression(
@@ -66,7 +70,7 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
             self.PARAM_OUTPUT_POLY, 'Output polygons with lidar_height'))
 
     def shortHelpString(self):
-        return ('LiDARHeightExtractor: compute nDSM using custom point cloud filters and extract max height per polygon (buildings, trees, ...).')
+        return ('LiDARHeightExtractor v2.0.4: compute nDSM using custom point cloud filters and extract max height per polygon (buildings, trees, ...). Includes optional polygon buffer parameter to fix geometry errors. Designed for Qt6-ready QGIS 3.38 through QGIS 4.x.')
 
     def _crs_to_authid(self, crs_val):
         try:
@@ -95,14 +99,15 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
 
     def processAlgorithm(self, parameters, context, model_feedback):
         polygon_layer_id = parameters[self.PARAM_POLYGON]
+        buffer_distance = float(parameters.get(self.PARAM_BUFFER, 0.0))
         res = float(parameters[self.PARAM_RES])
         tile = int(parameters[self.PARAM_TILE])
         target_crs_param = parameters.get(self.PARAM_TARGET_CRS, None)
         output_poly_raw = parameters[self.PARAM_OUTPUT_POLY]
         output_poly = self._extract_output_path(output_poly_raw)
 
-        log_path = os.path.join(tempfile.gettempdir(), f"lidar_height_extractor_v1_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
-        logger = logging.getLogger('LiDARHeightExtractor_v1')
+        log_path = os.path.join(tempfile.gettempdir(), f"lidar_height_extractor_v2_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+        logger = logging.getLogger('LiDARHeightExtractor_v2')
         logger.setLevel(logging.INFO)
         fh = logging.FileHandler(log_path, encoding='utf-8')
         fh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
@@ -115,22 +120,25 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
         ndsm_tmp = None
 
         try:
-            logger.info('Paso 0: DEM (pdal:exportrastertin - all points)')
+            logger.info('LiDARHeightExtractor v2.0.4 - QGIS 3.38-4.x Compatible - With Polygon Buffer Support')
+            logger.info('Step 0: DEM (pdal:exportrastertin - all points)')
             alg_params = {'FILTER_EXPRESSION': parameters[self.PARAM_DEM_EXPR] if parameters.get(self.PARAM_DEM_EXPR) else None,'FILTER_EXTENT': None,'INPUT': parameters[self.PARAM_POINTCLOUD],
                           'ORIGIN_X': None,'ORIGIN_Y': None,'RESOLUTION': res,'TILE_SIZE': tile,'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT}
             outputs['dem'] = processing.run('pdal:exportrastertin', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
             dem_path = outputs['dem']['OUTPUT']
-            logger.info(f'DEM generado: {dem_path}')
+            logger.info(f'DEM generated: {dem_path}')
 
-            feedback.setCurrentStep(1);  logger.info('Paso 1: DTM (pdal:exportrastertin - ground filtered)')
+            feedback.setCurrentStep(1)
+            logger.info('Step 1: DTM (pdal:exportrastertin - ground filtered)')
             if feedback.isCanceled(): return {}
             alg_params = {'FILTER_EXPRESSION': parameters[self.PARAM_GROUND_EXPR],'FILTER_EXTENT': None,'INPUT': parameters[self.PARAM_POINTCLOUD],
                           'ORIGIN_X': None,'ORIGIN_Y': None,'RESOLUTION': res,'TILE_SIZE': tile,'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT}
             outputs['dtm'] = processing.run('pdal:exportrastertin', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
             dtm_path = outputs['dtm']['OUTPUT']
-            logger.info(f'DTM generado: {dtm_path}')
+            logger.info(f'DTM generated: {dtm_path}')
 
-            feedback.setCurrentStep(2); logger.info('Paso 2: nDSM = DEM - DTM (NumPy/GDAL directo)')
+            feedback.setCurrentStep(2)
+            logger.info('Step 2: nDSM = DEM - DTM (NumPy/GDAL direct)')
             if feedback.isCanceled(): return {}
             
             # Open rasters with GDAL
@@ -138,7 +146,7 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
             dtm_ds = gdal.Open(dtm_path)
             
             if not dem_ds or not dtm_ds:
-                raise Exception("Error al abrir los rásteres DEM o DTM con GDAL")
+                raise Exception("Error opening DEM or DTM rasters with GDAL")
             
             dem_band = dem_ds.GetRasterBand(1)
             dem_gt = dem_ds.GetGeoTransform()
@@ -152,7 +160,7 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
             need_resample = (dem_xsize != dtm_xsize) or (dem_ysize != dtm_ysize) or (dem_ds.GetGeoTransform() != dtm_ds.GetGeoTransform())
 
             if need_resample:
-                logger.info('Rásteres con diferente tamaño/transform — re-muestreando DTM a rejilla DEM')
+                logger.info('Rasters with different size/transform — resampling DTM to DEM grid')
                 resampled_dtm = os.path.join(tempfile.gettempdir(), f"dtm_resampled_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.tif")
                 resampled_tmp = resampled_dtm
 
@@ -164,13 +172,13 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
                 dst_srs = None
                 if target_crs_param:
                     dst_srs = self._crs_to_authid(target_crs_param)
-                    logger.info(f'Usuario solicitó CRS destino: {dst_srs}')
+                    logger.info(f'User requested target CRS: {dst_srs}')
 
                 if not dst_srs and dem_proj:
                     try_auth = self._wkt_to_authid(dem_proj)
                     if try_auth:
                         dst_srs = try_auth
-                        logger.info(f'Usando DEM CRS authid detectado: {dst_srs}')
+                        logger.info(f'Using detected DEM CRS authid: {dst_srs}')
                     else:
                         dst_srs = dem_proj
 
@@ -210,18 +218,33 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
             dtm_ds = None
             ndsm_ds = None
             
-            logger.info(f'nDSM temporal guardado en: {ndsm_tmp}')
+            logger.info(f'Temporary nDSM saved at: {ndsm_tmp}')
 
-            # Paso 3: Zonal statistics
-            feedback.setCurrentStep(3); logger.info('Paso 3: Calculando estadísticas zonales (max nDSM por polígono)')
+            # Step 3: Zonal statistics
+            feedback.setCurrentStep(3)
+            logger.info('Step 3: Computing zonal statistics (max nDSM per polygon)')
             if feedback.isCanceled(): return {}
 
             # Load polygon layer
             polygon_layer = context.getMapLayer(polygon_layer_id)
             if not polygon_layer:
-                raise Exception(f"No se pudo cargar la capa de polígonos: {polygon_layer_id}")
+                raise Exception(f"Could not load polygon layer: {polygon_layer_id}")
 
-            logger.info(f'Capa de polígonos cargada: {polygon_layer.name()} con {polygon_layer.featureCount()} features')
+            logger.info(f'Polygon layer loaded: {polygon_layer.name()} with {polygon_layer.featureCount()} features')
+
+            # Apply buffer if specified
+            if buffer_distance > 0:
+                logger.info(f'Applying buffer of {buffer_distance} m to polygons')
+                polygon_layer.startEditing()
+                for feature in polygon_layer.getFeatures():
+                    geom = feature.geometry()
+                    if geom and not geom.isEmpty():
+                        buffered_geom = geom.buffer(buffer_distance, segments=4)
+                        polygon_layer.changeGeometry(feature.id(), buffered_geom)
+                polygon_layer.commitChanges()
+                logger.info(f'Buffer applied successfully')
+            else:
+                logger.info('No buffer applied (buffer distance = 0 m)')
 
             # Create output layer by copying input
             out_provider_name = polygon_layer.dataProvider().name()
@@ -237,25 +260,25 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
             # Open nDSM raster
             ndsm_raster_ds = gdal.Open(ndsm_tmp)
             if not ndsm_raster_ds:
-                raise Exception(f"No se pudo abrir raster nDSM: {ndsm_tmp}")
+                raise Exception(f"Could not open nDSM raster: {ndsm_tmp}")
 
             ndsm_band = ndsm_raster_ds.GetRasterBand(1)
             ndsm_data_read = ndsm_band.ReadAsArray().astype(np.float32)
             ndsm_gt = ndsm_raster_ds.GetGeoTransform()
 
-            logger.info(f'Raster nDSM cargado: shape {ndsm_data_read.shape}, geotransform {ndsm_gt}')
+            logger.info(f'nDSM raster loaded: shape {ndsm_data_read.shape}, geotransform {ndsm_gt}')
 
             # Calculate max nDSM for each polygon
             output_layer.startEditing()
             lidar_height_idx = output_layer.fields().indexFromName('lidar_height')
 
-            logger.info(f'Iniciando cálculo de máximos por polígono. Total features: {output_layer.featureCount()}')
+            logger.info(f'Starting max calculation per polygon. Total features: {output_layer.featureCount()}')
             feature_count = 0
             
             for feature in output_layer.getFeatures():
                 feature_count += 1
                 if feature_count % 100 == 0:
-                    logger.info(f'Procesados {feature_count} polígonos...')
+                    logger.info(f'Processed {feature_count} polygons...')
                 
                 geom = feature.geometry()
                 
@@ -277,7 +300,7 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
 
                 # Extract raster subset within bounds
                 if col_max <= col_min or row_max <= row_min:
-                    logger.warning(f'Feature {feature.id()} tiene bounds fuera del raster')
+                    logger.warning(f'Feature {feature.id()} has bounds outside raster')
                     output_layer.changeAttributeValue(feature.id(), lidar_height_idx, 0.0)
                     continue
 
@@ -299,14 +322,14 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
             output_layer.commitChanges()
             ndsm_raster_ds = None
 
-            logger.info(f'Estadísticas zonales completadas. Total features procesados: {feature_count}')
+            logger.info(f'Zonal statistics completed. Total features processed: {feature_count}')
 
-            logger.info(f'Guardando capa de polígonos en: {output_poly}')
+            logger.info(f'Saving polygon layer to: {output_poly}')
             
             # Determine output path
             if not output_poly or 'memory:' in str(output_poly) or 'TEMPORARY_OUTPUT' in str(output_poly):
                 output_poly = os.path.join(tempfile.gettempdir(), f"polygons_lidar_height_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.gpkg")
-                logger.info(f'Output remapped a archivo temporal: {output_poly}')
+                logger.info(f'Output remapped to temporary file: {output_poly}')
 
             # Export output layer using QgsVectorFileWriter
             error, error_msg = QgsVectorFileWriter.writeAsVectorFormatV2(
@@ -318,7 +341,7 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
             if error != QgsVectorFileWriter.NoError:
                 raise Exception(f'QgsVectorFileWriter error {error}: {error_msg}')
 
-            logger.info(f'Capa de polígonos guardada exitosamente en: {output_poly}')
+            logger.info(f'Polygon layer successfully saved to: {output_poly}')
             results[self.PARAM_OUTPUT_POLY] = output_poly
             results['log_file'] = log_path
             
@@ -329,14 +352,14 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
                     output_layer_loaded = project.addMapLayer(
                         QgsVectorLayer(output_poly, 'lidar_height', 'ogr')
                     )
-                    logger.info(f'Capa cargada en QGIS: {output_layer_loaded.name() if output_layer_loaded else "FAILED"}')
+                    logger.info(f'Layer loaded in QGIS: {output_layer_loaded.name() if output_layer_loaded else "FAILED"}')
                 else:
                     logger.warning('No project available in context, layer not loaded')
             except Exception as load_err:
                 logger.warning(f'Could not load layer into QGIS: {str(load_err)}')
 
         except Exception as e:
-            logger.error(f'Error en procesamiento: {str(e)}', exc_info=True)
+            logger.error(f'Error in processing: {str(e)}', exc_info=True)
             raise
         finally:
             # Cleanup temporaries
@@ -358,5 +381,5 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
     def name(self): return 'LiDARHeightExtractor'
     def displayName(self): return 'LiDARHeightExtractor + Zonal Stats'
     def group(self): return 'LiDAR'
-    def groupId(self): return 'lidar_height_extractor_v1'
+    def groupId(self): return 'lidar_height_extractor_v2'
     def createInstance(self): return LiDARHeightExtractorAlgorithm()

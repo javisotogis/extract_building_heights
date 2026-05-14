@@ -1,10 +1,26 @@
-# LiDARHeightExtractor v1.0.2
+# LiDARHeightExtractor v2.0.1
 
 ## Overview
 
-**LiDARHeightExtractor** is a QGIS plugin that computes normalized Digital Surface Models (nDSM) from point cloud data and extracts the maximum height for each polygon feature. This is useful for analyzing building rooftop heights, tree canopy heights, or any polygon-based height extraction analysis.
+**LiDARHeightExtractor v2.0.4** is a QGIS plugin that computes normalized Digital Surface Models (nDSM) from point cloud data and extracts the maximum height for each polygon feature. This version targets **Qt6-ready QGIS 3.38 through QGIS 4.x**, with an added optional polygon buffer parameter to fix geometry errors.
 
 The plugin leverages PDAL (Point Data Abstraction Library) for efficient point cloud rasterization and GDAL for raster arithmetic, providing a robust, production-ready workflow for LiDAR-based height analysis.
+
+---
+
+## What's New in v2.0.1
+
+### Latest Updates (v2.0.1)
+- **Polygon Buffer Parameter**: New optional buffer parameter (default 0m) to fix geometry errors or adjust analysis areas
+- **Flexible Geometry Handling**: Support positive/negative buffer values for expansion/contraction
+- **Enhanced Robustness**: Better handling of geometry errors in input polygons
+
+### Qt6 & Core Features (v2.0.0)
+- **Qt6 Compatibility**: Works seamlessly with QGIS Qt6 implementations
+- **QGIS 3.38-4.x compatibility range**: Targets Qt6-ready QGIS releases
+- **Enhanced Logging**: Improved logging with version identifiers
+- **Modernized API Usage**: Updated deprecated methods (`exec_()` → `exec()`)
+- **Provider ID Update**: Changed to `lidar_height_extractor_v2`
 
 ---
 
@@ -49,7 +65,7 @@ Analyze height variations for:
 ## Requirements
 
 ### Software
-- **QGIS**: 3.34 or later (tested on 3.40.0-Bratislava)
+- **QGIS**: 3.38 or later, including QGIS 4.x compatibility in plugin metadata
 - **PDAL**: Must be available in QGIS (includes `pdal_wrench` binary)
 - **Python**: 3.12+ (bundled with QGIS)
 
@@ -66,14 +82,14 @@ The following are typically available in QGIS Python and are required:
 
 ## Installation
 
-### Windows (OSGeo4W / QGIS Standalone)
+### Windows (OSGeo4W / QGIS Standalone with Qt6)
 
 1. **Install PDAL** (if not already present):
    - If using OSGeo4W, ensure the PDAL package is installed
    - If using QGIS standalone, PDAL is typically bundled
 
 2. **Install the Plugin**:
-   - Download `lidar_height_extractor_v1_0_0.zip`
+   - Download `lidar_height_extractor_v2_0_0.zip`
    - Close QGIS
    - Extract the zip to your QGIS plugins folder:
      ```
@@ -85,10 +101,13 @@ The following are typically available in QGIS Python and are required:
 3. **Python Package Installation** (if needed):
    - Follow [this guide for Windows](https://landscapearchaeology.org/2018/installing-python-packages-in-qgis-3-for-windows/)
 
-### Linux / macOS
+### Linux / macOS (Qt6 Compatible)
 - Install PDAL via package manager (e.g., `apt install pdal`, `brew install pdal`)
 - Extract plugin to `~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/`
 - Restart QGIS
+
+### Qt6 Deployment Note
+The v2.0.0 plugin uses the abstraction layer `qgis.PyQt` which automatically handles both Qt5 and Qt6 implementations. No additional configuration is needed for Qt6 environments.
 
 ---
 
@@ -96,7 +115,7 @@ The following are typically available in QGIS Python and are required:
 
 ### Basic Workflow
 
-1. **Open QGIS** and load your data:
+1. **Open QGIS** (3.38+ or 4.x) and load your data:
    - Point cloud (LAZ, LAS, or other PDAL-supported formats)
    - Polygon layer (buildings, trees, parcels, etc.)
 
@@ -106,9 +125,8 @@ The following are typically available in QGIS Python and are required:
 
 3. **Configure Parameters**:
    - **Polygon Layer**: Select the layer containing polygons (e.g., building footprints)
+   - **Polygon Buffer Distance** (m): Optional buffer to fix geometry errors (default: 0 m, no buffer). Specify a distance > 0 to expand or shrink polygons
    - **Point Cloud**: Provide the path to your point cloud file (LAZ/LAS)
-   - **Polygon Layer**: Your input polygon layer (buildings, trees, etc.)
-   - **Point Cloud**: Your LiDAR data
    - **DEM Filter** (optional): Custom PDAL expression for DEM filtering (e.g., `"Classification != 7"` to exclude noise)
    - **Ground Filter**: Leave as default (`Classification = 2`) or customize for your data
    - **Raster Resolution**: Cell size in map units (e.g., 1 m)
@@ -137,6 +155,7 @@ The plugin produces a polygon layer (GeoPackage or other vector format) with:
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
 | Polygon Layer | Vector (Polygon) | Polygons for which heights are computed | Building footprints, tree canopies |
+| Polygon Buffer Distance | Number (meters) | Optional buffer to fix geometry errors (default: 0, no buffer) | 0 (no buffer) or 0.5 (0.5 m buffer) |
 | Point Cloud | Point Cloud Layer | LiDAR or point cloud data | LAZ file path: `C:/data/lidar.laz` |
 | DEM Filter | Expression (optional) | PDAL filter for DEM point selection | `"Classification != 7"` (exclude noise) |
 | Ground Filter | Expression | PDAL filter for ground classification | `Classification = 2` (default) |
@@ -161,7 +180,9 @@ The plugin produces a polygon layer (GeoPackage or other vector format) with:
 
 3. **Step 2 - nDSM Computation**: Computes nDSM = DEM - DTM using NumPy and GDAL. Handles raster resampling if DEM and DTM grids differ.
 
-4. **Step 3 - Zonal Statistics**: Iterates over each polygon, extracts the maximum nDSM value within the polygon bounds, and writes it to the `lidar_height` field.
+4. **Pre-Step 3 - Polygon Buffer** (optional): If buffer distance > 0, expands or contracts polygon geometries to fix errors or adjust analysis area.
+
+5. **Step 3 - Zonal Statistics**: Iterates over each polygon (with optional buffer applied), extracts the maximum nDSM value within the polygon bounds, and writes it to the `lidar_height` field.
 
 ---
 
@@ -177,11 +198,42 @@ The plugin produces a polygon layer (GeoPackage or other vector format) with:
 
 ---
 
+## Qt6 Compatibility Notes
+
+### For Plugin Developers
+
+The v2.0.0 release uses QGIS's abstraction layer `qgis.PyQt` for all Qt imports, ensuring seamless compatibility with both Qt5 and Qt6:
+
+```python
+from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtWidgets import QAction, QDialog
+```
+
+### Key Changes from v1.x to v2.0.0
+
+1. **Dialog Execution**: Changed from `dlg.exec_()` to `dlg.exec()` (Qt6 standard)
+2. **Provider ID**: Updated from `lidar_height_extractor_v1` to `lidar_height_extractor_v2`
+3. **Icon References**: Updated icon path references to `lidar_height_extractor_v2_0_0`
+4. **Logging Identifiers**: All logs now reference v2.0.0 for clarity
+
+### Testing on Different Qt Versions
+
+- **Qt6 (QGIS 3.38+)**: Fully compatible and tested
+- **QGIS 4.x**: Allowed by plugin metadata for Qt6 QGIS 4 builds
+- **Python 3.12+**: Verified compatibility
+
+---
+
 ## Troubleshooting
 
 ### "PDAL algorithm not found" Error
 - **Cause**: PDAL or `pdal_wrench` not available in QGIS
 - **Solution**: Install PDAL and restart QGIS
+
+### Qt-Related Import Errors
+- **Cause**: Direct Qt5/Qt6 imports instead of `qgis.PyQt` abstraction
+- **Solution**: Ensure plugin is using v2.0.0 with `qgis.PyQt` imports
 
 ### All `lidar_height` values are 0 or NULL
 - **Cause**: Ground filter expression incorrect or point cloud data format mismatch
@@ -194,6 +246,21 @@ The plugin produces a polygon layer (GeoPackage or other vector format) with:
 ### Output file not created
 - **Cause**: Invalid output path or permissions issue
 - **Solution**: Use a temporary path first; check folder permissions
+
+---
+
+## Migration from v1.x to v2.0.0
+
+### Compatibility
+- **Output Format**: Identical to v1.x—all projects created with v1.0.2 output are fully compatible
+- **Parameters**: No changes to algorithm parameters; existing workflows remain compatible
+- **API**: The plugin ID has changed from `lidar_height_extractor_v1` to `lidar_height_extractor_v2`
+
+### Recommended Steps
+1. Back up any existing installations of v1.0.2
+2. Install v2.0.0 to a new directory in your plugins folder
+3. Both versions can coexist without conflicts
+4. Test v2.0.0 on your existing data before removing v1.0.2
 
 ---
 
@@ -225,13 +292,28 @@ See [LICENSE](LICENSE) for full details.
 
 ## Version History
 
-### v1.0.1 (2025-11-13)
+### v2.0.0 (2025-05-14)
+- **Qt6 Compatibility**: Full support for QGIS with Qt6
+- **QGIS 3.38-4.x compatibility range**: Targets Qt6-ready QGIS releases
+- **Enhanced Logging**: Improved logging with version identifiers
+- **Modernized API Usage**: Updated deprecated methods (`exec_()` → `exec()`)
+- **Provider ID Update**: Changed to `lidar_height_extractor_v2`
+
+### v2.0.1 (2025-05-14)
+- **Polygon Buffer Parameter**: Added optional buffer distance parameter (default 0m)
+- **Geometry Error Fixing**: Support for expanding/contracting polygons to fix geometry errors
+- **Enhanced Robustness**: Better handling of geometry errors in input polygons
+
+### v1.0.2 (2025-11-13)
+- Fixed layer loading into QGIS using correct context.project() method
+
+### v1.0.1 (2025-11-12)
 - Added custom DEM filter expression parameter for flexible point cloud filtering
 - Fixed automatic layer loading into QGIS upon processing completion
 - Enhanced documentation with DEM filter examples
 
-### v1.0.0 (2025-11-12)
-- Initial public release
+### v1.0.0 (2025-11-11)
+- Initial public release as LiDARHeightExtractor
 - nDSM computation from point clouds
 - Zonal statistics for polygon-based height extraction
 - Support for customizable ground filtering
@@ -246,36 +328,6 @@ If you use LiDARHeightExtractor in your research or projects, please cite:
 
 ```
 LiDARHeightExtractor (2025). QGIS Plugin for nDSM computation and polygon height extraction.
+Version 2.0.1 (Qt6 compatible with polygon buffer support).
 https://github.com/javisotogis/extract_building_heights
 ```
-
----
-
-## Acknowledgments
-
-LiDARHeightExtractor relies on:
-- **QGIS** and its processing framework
-- **PDAL** for efficient point cloud processing
-- **GDAL** for raster operations
-- **NumPy** for numerical computations
-
----
-
-## Contributing
-
-Contributions, bug reports, and feature requests are welcome!
-
-1. Fork the [repository](https://github.com/javisotogis/extract_building_heights)
-2. Create a feature branch
-3. Submit a pull request with a clear description of your changes
-
----
-
-## Disclaimer
-
-This plugin is provided "as-is" without warranty. Users are responsible for validating results and ensuring data quality. Always backup your data before processing.
-
----
-
-**Last Updated**: November 13, 2025  
-**Status**: Stable (v1.0.2)
