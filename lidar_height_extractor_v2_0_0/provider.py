@@ -8,4 +8,4 @@ class LidarProvider(QgsProcessingProvider):
 
     def id(self): return 'lidar_height_extractor_v2'
     def name(self): return 'LiDAR Height Extractor'
-    def longName(self): return 'LiDAR Height Extractor (v2.0.1)'
+    def longName(self): return 'LiDAR Height Extractor (v2.0.4)'

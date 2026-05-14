@@ -2,7 +2,7 @@
 
 ## Overview
 
-**LiDARHeightExtractor v2.0.1** is a QGIS plugin that computes normalized Digital Surface Models (nDSM) from point cloud data and extracts the maximum height for each polygon feature. This version is fully compatible with **QGIS 3.38+ and Qt6**, with an added optional polygon buffer parameter to fix geometry errors.
+**LiDARHeightExtractor v2.0.4** is a QGIS plugin that computes normalized Digital Surface Models (nDSM) from point cloud data and extracts the maximum height for each polygon feature. This version targets **Qt6-ready QGIS 3.38 through QGIS 4.x**, with an added optional polygon buffer parameter to fix geometry errors.
 
 The plugin leverages PDAL (Point Data Abstraction Library) for efficient point cloud rasterization and GDAL for raster arithmetic, providing a robust, production-ready workflow for LiDAR-based height analysis.
 
@@ -17,7 +17,7 @@ The plugin leverages PDAL (Point Data Abstraction Library) for efficient point c
 
 ### Qt6 & Core Features (v2.0.0)
 - **Qt6 Compatibility**: Works seamlessly with QGIS Qt6 implementations
-- **Minimum QGIS 3.38**: Ensures stable Qt6 support
+- **QGIS 3.38-4.x compatibility range**: Targets Qt6-ready QGIS releases
 - **Enhanced Logging**: Improved logging with version identifiers
 - **Modernized API Usage**: Updated deprecated methods (`exec_()` → `exec()`)
 - **Provider ID Update**: Changed to `lidar_height_extractor_v2`
@@ -65,7 +65,7 @@ Analyze height variations for:
 ## Requirements
 
 ### Software
-- **QGIS**: 3.38 or later (fully tested with 3.38+, Qt6 compatible)
+- **QGIS**: 3.38 or later, including QGIS 4.x compatibility in plugin metadata
 - **PDAL**: Must be available in QGIS (includes `pdal_wrench` binary)
 - **Python**: 3.12+ (bundled with QGIS)
 
@@ -115,7 +115,7 @@ The v2.0.0 plugin uses the abstraction layer `qgis.PyQt` which automatically han
 
 ### Basic Workflow
 
-1. **Open QGIS** (3.38+) and load your data:
+1. **Open QGIS** (3.38+ or 4.x) and load your data:
    - Point cloud (LAZ, LAS, or other PDAL-supported formats)
    - Polygon layer (buildings, trees, parcels, etc.)
 
@@ -219,8 +219,8 @@ from qgis.PyQt.QtWidgets import QAction, QDialog
 
 ### Testing on Different Qt Versions
 
-- **Qt5 (QGIS 3.34-3.36)**: Tested and working
 - **Qt6 (QGIS 3.38+)**: Fully compatible and tested
+- **QGIS 4.x**: Allowed by plugin metadata for Qt6 QGIS 4 builds
 - **Python 3.12+**: Verified compatibility
 
 ---
@@ -294,7 +294,7 @@ See [LICENSE](LICENSE) for full details.
 
 ### v2.0.0 (2025-05-14)
 - **Qt6 Compatibility**: Full support for QGIS with Qt6
-- **Minimum QGIS 3.38**: Ensures stable Qt6 support
+- **QGIS 3.38-4.x compatibility range**: Targets Qt6-ready QGIS releases
 - **Enhanced Logging**: Improved logging with version identifiers
 - **Modernized API Usage**: Updated deprecated methods (`exec_()` → `exec()`)
 - **Provider ID Update**: Changed to `lidar_height_extractor_v2`

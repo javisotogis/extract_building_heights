@@ -70,7 +70,7 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
             self.PARAM_OUTPUT_POLY, 'Output polygons with lidar_height'))
 
     def shortHelpString(self):
-        return ('LiDARHeightExtractor v2.0.1: compute nDSM using custom point cloud filters and extract max height per polygon (buildings, trees, ...). Includes optional polygon buffer parameter to fix geometry errors. Qt6 compatible.')
+        return ('LiDARHeightExtractor v2.0.4: compute nDSM using custom point cloud filters and extract max height per polygon (buildings, trees, ...). Includes optional polygon buffer parameter to fix geometry errors. Designed for Qt6-ready QGIS 3.38 through QGIS 4.x.')
 
     def _crs_to_authid(self, crs_val):
         try:
@@ -120,7 +120,7 @@ class LiDARHeightExtractorAlgorithm(QgsProcessingAlgorithm):
         ndsm_tmp = None
 
         try:
-            logger.info('LiDARHeightExtractor v2.0.1 - Qt6 Compatible - With Polygon Buffer Support')
+            logger.info('LiDARHeightExtractor v2.0.4 - QGIS 3.38-4.x Compatible - With Polygon Buffer Support')
             logger.info('Step 0: DEM (pdal:exportrastertin - all points)')
             alg_params = {'FILTER_EXPRESSION': parameters[self.PARAM_DEM_EXPR] if parameters.get(self.PARAM_DEM_EXPR) else None,'FILTER_EXTENT': None,'INPUT': parameters[self.PARAM_POINTCLOUD],
                           'ORIGIN_X': None,'ORIGIN_Y': None,'RESOLUTION': res,'TILE_SIZE': tile,'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT}
